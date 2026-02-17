@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>プレゼンタイマー</title>
+<style>
+body { font-family: sans-serif; text-align: center; margin-top: 40px; }
+input { width: 60px; }
+#timer { font-size: 48px; margin: 20px; }
+table { margin: 20px auto; border-collapse: collapse; }
+th, td { border: 1px solid #333; padding: 6px 12px; }
+</style>
+</head>
+<body>
+
+<h1>プレゼンタイマー</h1>
+
+出席番号: <input type="number" id="studentNumber"><br><br>
+
+時間:
+<input type="number" id="minutes" value="3">分
+<input type="number" id="seconds" value="0">秒<br><br>
+
+ベル1（残り秒）: <input type="number" id="bell1" value="60"><br>
+ベル2（残り秒）: <input type="number" id="bell2" value="30"><br>
+ベル3（残り秒）: <input type="number" id="bell3" value="10"><br><br>
+
+<div id="timer">00:00</div>
+
+<button onclick="startTimer()">スタート</button>
+<button onclick="stopTimer()">ストップ</button>
+<button onclick="downloadCSV()">CSVダウンロード</button>
+<input type="file" onchange="loadCSV(event)">
+
+<h2>記録</h2>
+<table>
+<thead>
+<tr><th>出席番号</th><th>発表時間</th></tr>
+</thead>
+<tbody id="records"></tbody>
+</table>
+
+<audio id="bell" src="bell.mp3"></audio>
+
+<script>
+let countdown;
+let totalTime = 0;
+let remainingTime = 0;
+let records = JSON.parse(localStorage.getItem("records")) || [];
+
+function formatTime(sec) {
+  let m = Math.floor(Math.abs(sec) / 60);
+  let s = Math.abs(sec) % 60;
+  return (sec < 0 ? "-" : "") +
+    String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0');
+}
+
+function renderTable() {
+  const tbody = document.getElementById("records");
+  tbody.innerHTML = "";
+  records.forEach(r => {
+    tbody.innerHTML += `<tr><td>${r.number}</td><td>${r.time}</td></tr>`;
+  });
+}
+
+renderTable();
+
+function playBell(times) {
+  const bell = document.getElementById("bell");
+  let count = 0;
+
+  function playOnce() {
+    bell.currentTime = 0;
+    bell.play();
+    count++;
+    if (count < times) {
+      setTimeout(playOnce, 700);
+    }
+  }
+
+  playOnce();
+}
+
+function startTimer() {
+  clearInterval(countdown);
+
+  const min = parseInt(document.getElementById("minutes").value) || 0;
+  const sec = parseInt(document.getElementById("seconds").value) || 0;
+
+  totalTime = min * 60 + sec;
+  remainingTime = totalTime;
+
+  document.getElementById("timer").textContent = formatTime(remainingTime);
+
+  const bell1 = parseInt(document.getElementById("bell1").value);
+  const bell2 = parseInt(document.getElementById("bell2").value);
+  const bell3 = parseInt(document.getElementById("bell3").value);
+
+  countdown = setInterval(() => {
+
+    remainingTime--;
+    document.getElementById("timer").textContent = formatTime(remainingTime);
+
+    if (remainingTime === bell1) playBell(1);
+    if (remainingTime === bell2) playBell(2);
+    if (remainingTime === bell3) playBell(3);
+
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(countdown);
+
+  const studentNumber = document.getElementById("studentNumber").value;
+  const actualSeconds = totalTime - remainingTime;
+  const formattedTime = formatTime(actualSeconds);
+
+  records.push({ number: studentNumber, time: formattedTime });
+  localStorage.setItem("records", JSON.stringify(records));
+  renderTable();
+}
+
+function downloadCSV() {
+  let csv = "出席番号,発表時間\n";
+  records.forEach(r => {
+    csv += `${r.number},${r.time}\n`;
+  });
+
+  const blob = new Blob([csv], {type: "text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "presentation_log.csv";
+  a.click();
+}
+
+function loadCSV(event) {
+  const file = event.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const lines = e.target.result.split("\n").slice(1);
+    records = [];
+    lines.forEach(line => {
+      const [number, time] = line.split(",");
+      if (number && time) {
+        records.push({ number, time });
+      }
+    });
+    localStorage.setItem("records", JSON.stringify(records));
+    renderTable();
+  };
+
+  reader.readAsText(file);
+}
+</script>
+
+</body>
+</html>
