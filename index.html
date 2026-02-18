@@ -2,334 +2,315 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>発表タイマー（拡張版）</title>
-
+<title>発表タイマーPRO</title>
 <style>
-body {
-  font-family: sans-serif;
-  text-align: center;
-  padding: 20px;
-  transition: background-color 0.3s;
+body{
+  font-family:sans-serif;
+  text-align:center;
+  background:#f4f6f8;
+}
+.timer{
+  font-size:80px;
+  margin:20px;
+}
+input,button{
+  padding:6px;
+  margin:4px;
+}
+table{
+  margin:20px auto;
+  border-collapse:collapse;
+}
+th,td{
+  border:1px solid #ccc;
+  padding:6px 10px;
+}
+.star{
+  font-size:22px;
+  cursor:pointer;
+  color:#ccc;
+}
+.active{
+  color:gold;
+}
+.currentRow{
+  background:#fff3cd;
 }
 
-.timer {
-  font-size: 60px;
-  margin: 20px 0;
+.signature{
+  position:fixed;
+  bottom:10px;
+  right:15px;
+  font-size:12px;
+  color:rgba(0,0,0,0.25);
+  letter-spacing:1px;
+  user-select:none;
+  pointer-events:none;
 }
 
-.overTime {
-  color: red;
-}
-
-input {
-  width: 60px;
-  padding: 5px;
-  margin: 5px;
-}
-
-button {
-  padding: 6px 12px;
-  margin: 5px;
-  cursor: pointer;
-}
-
-table {
-  margin: 20px auto;
-  border-collapse: collapse;
-  width: 95%;
-}
-
-th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
-}
-
-th {
-  background: #eee;
-  cursor: pointer;
-}
-
-.fileBtn {
-  display: inline-block;
-  padding: 6px 12px;
-  background: #ddd;
-  cursor: pointer;
-}
 </style>
 </head>
 <body>
 
-<h1>発表タイマー</h1>
+<h2>発表タイマー PRO</h2>
 
-出席番号
-<input type="number" id="studentNumber">
+<div>
+出席番号：
+<input type="number" id="studentNumber" min="1" style="width:60px">
+</div>
 
-<br><br>
+<div>
+設定時間：
+<input type="number" id="setMin" value="2" style="width:60px"> 分
+<input type="number" id="setSec" value="0" style="width:60px"> 秒
+</div>
 
-発表時間
-<input type="number" id="totalMin" value="2">分
-<input type="number" id="totalSec" value="0">秒
+<div>
+ベル１（残り）：
+<input type="number" id="bell1Min" value="1" style="width:60px"> 分
+<input type="number" id="bell1Sec" value="0" style="width:60px"> 秒
+回数：
+<select id="bell1Count">
+<option value="0">0</option>
+<option value="1" selected>1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+</select>
+</div>
 
-<br><br>
+<div>
+ベル２（残り）：
+<input type="number" id="bell2Min" value="0" style="width:60px"> 分
+<input type="number" id="bell2Sec" value="30" style="width:60px"> 秒
+回数：
+<select id="bell2Count">
+<option value="0">0</option>
+<option value="1">1</option>
+<option value="2" selected>2</option>
+<option value="3">3</option>
+</select>
+</div>
 
-ベル① 残り
-<input type="number" id="bell1Min" value="1">分
-<input type="number" id="bell1Sec" value="0">秒
+<div>
+ベル３（残り）：
+<input type="number" id="bell3Min" value="0" style="width:60px"> 分
+<input type="number" id="bell3Sec" value="0" style="width:60px"> 秒
+回数：
+<select id="bell3Count">
+<option value="0">0</option>
+<option value="1">1</option>
+<option value="2">2</option>
+<option value="3" selected>3</option>
+</select>
+</div>
 
-ベル② 残り
-<input type="number" id="bell2Min" value="0">分
-<input type="number" id="bell2Sec" value="30">秒
-
-ベル③ 残り
-<input type="number" id="bell3Min" value="0">分
-<input type="number" id="bell3Sec" value="0">秒
-
-<br><br>
+<div class="timer" id="timer">00:00</div>
 
 <button onclick="startTimer()">開始</button>
 <button onclick="stopTimer()">終了</button>
-<button onclick="exportCSV()">CSV書き出し</button>
-
-<label class="fileBtn">
-CSV読込
-<input type="file" onchange="loadCSV(event)" hidden>
-</label>
-
-<div class="timer" id="display">02:00</div>
-
-<audio id="bell" src="bell.mp3"></audio>
-
-<h2>記録</h2>
+<button onclick="exportCSV()">CSV出力</button>
 
 <table>
 <thead>
 <tr>
-<th onclick="sortTable()">出席番号 ▲▼</th>
+<th>番号</th>
 <th>発表時間</th>
 <th>オーバー</th>
+<th>具体性</th>
+<th>独自性</th>
+<th>技術力</th>
 <th>メモ</th>
 <th>削除</th>
 </tr>
 </thead>
-<tbody id="records"></tbody>
+<tbody id="recordTable"></tbody>
 </table>
 
 <script>
-
 let interval;
 let endTime;
 let totalMsGlobal;
+let bellSettings = [];
 let records = JSON.parse(localStorage.getItem("records")) || [];
-let sortAsc = true;
+let currentIndex = null;
 
-function startTimer() {
+function playBell(times){
+  const audio = new Audio("https://actions.google.com/sounds/v1/alarms/bell_ring.ogg");
+  for(let i=0;i<times;i++){
+    setTimeout(()=>{
+      audio.currentTime=0;
+      audio.play();
+    },i*150);
+  }
+}
 
+function getMs(minId,secId){
+  const m = Number(document.getElementById(minId).value)||0;
+  const s = Number(document.getElementById(secId).value)||0;
+  return (m*60+s)*1000;
+}
+
+function startTimer(){
   const student = document.getElementById("studentNumber").value;
-  if (!student) {
+  if(!student){
     alert("出席番号を入力してください");
     return;
   }
 
-  const totalMin = Number(document.getElementById("totalMin").value);
-  const totalSec = Number(document.getElementById("totalSec").value);
-  totalMsGlobal = (totalMin * 60 + totalSec) * 1000;
-
-  const bell1 = getMs("bell1Min", "bell1Sec");
-  const bell2 = getMs("bell2Min", "bell2Sec");
-  const bell3 = getMs("bell3Min", "bell3Sec");
-
-  let bell1Played=false, bell2Played=false, bell3Played=false;
-
-  endTime = Date.now() + totalMsGlobal;
-
-  let previousRemaining = totalMsGlobal;
-
-  clearInterval(interval);
-
-  interval = setInterval(() => {
-
-    const now = Date.now();
-    const remaining = endTime - now;
-    const elapsed = now - (endTime - totalMsGlobal);
-
-    // ===== 表示処理 =====
-    let displayMin, displaySec;
-
-    if (remaining >= 0) {
-      const totalSeconds = Math.floor(remaining / 1000);
-      displayMin = Math.floor(totalSeconds / 60);
-      displaySec = totalSeconds % 60;
-      document.getElementById("display").classList.remove("overTime");
-    } else {
-      const overSeconds = Math.floor(Math.abs(remaining) / 1000);
-      displayMin = Math.floor(overSeconds / 60);
-      displaySec = overSeconds % 60;
-      document.getElementById("display").classList.add("overTime");
-    }
-
-    document.getElementById("display").innerText =
-      `${String(displayMin).padStart(2,'0')}:${String(displaySec).padStart(2,'0')}`;
-
-    // ===== ベル判定（瞬間検出）=====
-    if (!bell1Played && previousRemaining > bell1 && remaining <= bell1) {
-      playBell(1);
-      bell1Played = true;
-    }
-
-    if (!bell2Played && previousRemaining > bell2 && remaining <= bell2) {
-      playBell(2);
-      bell2Played = true;
-    }
-
-    if (!bell3Played && previousRemaining > bell3 && remaining <= bell3) {
-      playBell(3);
-      bell3Played = true;
-    }
-
-    previousRemaining = remaining;
-
-  }, 200);
-}
-
-function stopTimer() {
-
-  clearInterval(interval);
-
-  const actualElapsed = Date.now() - (endTime - totalMsGlobal);
-
-  const actualMin = Math.floor(actualElapsed / 60000);
-  const actualSec = Math.floor((actualElapsed % 60000) / 1000);
-
-  const overMs = actualElapsed - totalMsGlobal;
-
-  let overText = "0分0秒";
-  if (overMs > 0) {
-    const overMin = Math.floor(overMs / 60000);
-    const overSec = Math.floor((overMs % 60000) / 1000);
-    overText = `${overMin}分${overSec}秒`;
-  }
-
-  const student = document.getElementById("studentNumber").value;
-
   records.push({
     number:Number(student),
-    actual:`${actualMin}分${actualSec}秒`,
-    over:overText,
-    memo:""
+    actual:"計測中",
+    over:"-",
+    memo:"",
+    specific:0,
+    originality:0,
+    skill:0
   });
 
-  localStorage.setItem("records", JSON.stringify(records));
+  currentIndex = records.length-1;
+  localStorage.setItem("records",JSON.stringify(records));
+  renderTable();
+
+  totalMsGlobal = getMs("setMin","setSec");
+  endTime = Date.now()+totalMsGlobal;
+
+  bellSettings = [
+    {time:getMs("bell1Min","bell1Sec"),count:Number(document.getElementById("bell1Count").value)},
+    {time:getMs("bell2Min","bell2Sec"),count:Number(document.getElementById("bell2Count").value)},
+    {time:getMs("bell3Min","bell3Sec"),count:Number(document.getElementById("bell3Count").value)}
+  ];
+
+  interval = setInterval(()=>{
+    const now = Date.now();
+    const remaining = endTime-now;
+    const displayMs = remaining>=0?remaining:Math.abs(remaining);
+
+    const min = Math.floor(displayMs/60000);
+    const sec = Math.floor((displayMs%60000)/1000);
+    document.getElementById("timer").textContent =
+      (remaining>=0?"":"+")+
+      String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+
+    bellSettings.forEach(b=>{
+      if(b.count>0 && Math.abs(remaining-b.time)<500){
+        playBell(b.count);
+        b.count=0;
+      }
+    });
+
+  },200);
+}
+
+function stopTimer(){
+  clearInterval(interval);
+  if(currentIndex===null) return;
+
+  const actualElapsed = Date.now()-(endTime-totalMsGlobal);
+  const actualMin = Math.floor(actualElapsed/60000);
+  const actualSec = Math.floor((actualElapsed%60000)/1000);
+
+  const overMs = actualElapsed-totalMsGlobal;
+  let overText="0分0秒";
+  if(overMs>0){
+    const om = Math.floor(overMs/60000);
+    const os = Math.floor((overMs%60000)/1000);
+    overText=`${om}分${os}秒`;
+  }
+
+  records[currentIndex].actual=`${actualMin}分${actualSec}秒`;
+  records[currentIndex].over=overText;
+
+  localStorage.setItem("records",JSON.stringify(records));
+  renderTable();
+  currentIndex=null;
+}
+
+function renderStars(value,index,key){
+  let html="";
+  for(let i=1;i<=3;i++){
+    html+=`<span class="star ${i<=value?"active":""}"
+    onclick="setRating(${index},'${key}',${i})">★</span>`;
+  }
+  return html;
+}
+
+function setRating(index,key,value){
+  records[index][key]=value;
+  localStorage.setItem("records",JSON.stringify(records));
   renderTable();
 }
 
-function getMs(minId,secId){
-  return (Number(document.getElementById(minId).value)*60 +
-          Number(document.getElementById(secId).value))*1000;
+function updateMemo(index,text){
+  records[index].memo=text;
+  localStorage.setItem("records",JSON.stringify(records));
 }
-
-function playBell(times){
-
-  const bell = document.getElementById("bell");
-  let count = 0;
-
-  function playOnce(){
-
-    bell.currentTime = 0;
-    bell.play().catch(()=>{});
-
-    count++;
-
-    if(count < times){
-      // 最後以外は短く切る
-      setTimeout(()=>{
-        bell.pause();
-        bell.currentTime = 0;
-        playOnce();
-      }, 200);  // 0.45秒で次
-    }
-
-    // 最後は止めない（余韻あり）
-  }
-
-  playOnce();
-}
-
 
 function renderTable(){
-  const tbody=document.getElementById("records");
-  tbody.innerHTML="";
-  records.forEach((r,index)=>{
-    tbody.innerHTML+=`
-      <tr>
-        <td>${r.number}</td>
-        <td>${r.actual}</td>
-        <td>${r.over}</td>
-        <td contenteditable onblur="updateMemo(${index},this.innerText)">
-        ${r.memo||""}
-        </td>
-        <td><button onclick="deleteRecord(${index})">削除</button></td>
-      </tr>
+  const table=document.getElementById("recordTable");
+  table.innerHTML="";
+
+  records.forEach((r,i)=>{
+    const row=document.createElement("tr");
+
+    if(i===currentIndex) row.classList.add("currentRow");
+
+    row.innerHTML=`
+    <td>${r.number}</td>
+    <td>${r.actual}</td>
+    <td>${r.over}</td>
+    <td>${renderStars(r.specific,i,"specific")}</td>
+    <td>${renderStars(r.originality,i,"originality")}</td>
+    <td>${renderStars(r.skill,i,"skill")}</td>
+    <td>
+      <input value="${r.memo}" 
+        oninput="updateMemo(${i},this.value)">
+    </td>
+    <td>
+      <button onclick="deleteRecord(${i})">削除</button>
+    </td>
     `;
+    table.appendChild(row);
   });
 }
 
 function deleteRecord(index){
+
+  if(!confirm("この記録を削除しますか？")) return;
+
   records.splice(index,1);
-  localStorage.setItem("records",JSON.stringify(records));
-  renderTable();
-}
 
-function updateMemo(index,value){
-  records[index].memo=value;
-  localStorage.setItem("records",JSON.stringify(records));
-}
+  // 発表中の行を消した場合の安全処理
+  if(currentIndex===index){
+    currentIndex=null;
+    clearInterval(interval);
+    document.getElementById("timer").textContent="00:00";
+  }else if(currentIndex>index){
+    currentIndex--; 
+  }
 
-function sortTable(){
-  records.sort((a,b)=>sortAsc?a.number-b.number:b.number-a.number);
-  sortAsc=!sortAsc;
+  localStorage.setItem("records",JSON.stringify(records));
   renderTable();
 }
 
 function exportCSV(){
-  let csv="出席番号,実際時間,オーバー,メモ\n";
+  let csv="番号,実際時間,オーバー,具体性,独自性,技術力,メモ\n";
   records.forEach(r=>{
-    csv+=`${r.number},${r.actual},${r.over},${r.memo}\n`;
+    csv+=`${r.number},${r.actual},${r.over},${r.specific},${r.originality},${r.skill},"${r.memo}"\n`;
   });
 
   const blob=new Blob([csv],{type:"text/csv"});
-  const link=document.createElement("a");
-  link.href=URL.createObjectURL(blob);
-  link.download="records.csv";
-  link.click();
-}
-
-function loadCSV(event){
-  const file=event.target.files[0];
-  const reader=new FileReader();
-
-  reader.onload=function(e){
-    const lines=e.target.result.split("\n");
-    records=[];
-    lines.slice(1).forEach(line=>{
-      const cols=line.split(",");
-      if(cols[0]){
-        records.push({
-          number:Number(cols[0]),
-          actual:cols[1]||"",
-          over:cols[2]||"",
-          memo:cols[3]||""
-        });
-      }
-    });
-    localStorage.setItem("records",JSON.stringify(records));
-    renderTable();
-  };
-
-  reader.readAsText(file);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="presentation_records.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 renderTable();
-
 </script>
+
+<div class="signature">©️2026 h.kikuchi</div>
+
 </body>
 </html>
