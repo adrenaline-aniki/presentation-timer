@@ -133,14 +133,23 @@ let totalMsGlobal;
 let bellSettings = [];
 let records = JSON.parse(localStorage.getItem("records")) || [];
 let currentIndex = null;
+let bellAudio;
+
+function initAudio(){
+  bellAudio = new Audio("bell.mp3")
+  bellAudio.load();
+  bellAudio.play().then(()=>{
+     bellAudio.pause();
+     bellAudio.currentTime = 0;
+  }).catch(()=>{});
+}
 
 function playBell(times){
-  const audio = new Audio("https://actions.google.com/sounds/v1/alarms/bell_ring.ogg");
   for(let i=0;i<times;i++){
     setTimeout(()=>{
-      audio.currentTime=0;
-      audio.play();
-    },i*150);
+      bellAudio.currentTime=0;
+      bellAudio.play();
+    },i*120);
   }
 }
 
@@ -151,6 +160,7 @@ function getMs(minId,secId){
 }
 
 function startTimer(){
+  initAudio();
   const student = document.getElementById("studentNumber").value;
   if(!student){
     alert("出席番号を入力してください");
