@@ -18,8 +18,8 @@ input,button{
   margin:4px;
 }
 table{
-  margin:20px auto;
   border-collapse:collapse;
+  width:100%;
 }
 th,td{
   border:1px solid #ccc;
@@ -30,11 +30,16 @@ th,td{
   cursor:pointer;
   color:#ccc;
 }
-.active{
-  color:gold;
-}
-.currentRow{
-  background:#fff3cd;
+.active{ color:gold; }
+.currentRow{ background:#fff3cd; }
+
+.tableContainer{
+  max-height:300px;
+  overflow-y:auto;
+  margin:20px auto;
+  width:95%;
+  background:white;
+  border:1px solid #ccc;
 }
 
 .signature{
@@ -43,11 +48,7 @@ th,td{
   right:15px;
   font-size:12px;
   color:rgba(0,0,0,0.25);
-  letter-spacing:1px;
-  user-select:none;
-  pointer-events:none;
 }
-
 </style>
 </head>
 <body>
@@ -64,6 +65,8 @@ th,td{
 <input type="number" id="setMin" value="2" style="width:60px"> 分
 <input type="number" id="setSec" value="0" style="width:60px"> 秒
 </div>
+
+<!-- ▼▼ ベル復活 ▼▼ -->
 
 <div>
 ベル１（残り）：
@@ -104,12 +107,21 @@ th,td{
 </select>
 </div>
 
+<!-- ▲▲ ベル復活 ▲▲ -->
+
 <div class="timer" id="timer">00:00</div>
 
 <button onclick="startTimer()">開始</button>
 <button onclick="stopTimer()">終了</button>
-<button onclick="exportCSV()">CSV出力</button>
 
+<br><br>
+
+CSV名：
+<input type="text" id="csvName" placeholder="クラス名など">
+<button onclick="exportCSV()">CSV出力</button>
+<input type="file" accept=".csv" onchange="importCSV(event)">
+
+<div class="tableContainer">
 <table>
 <thead>
 <tr>
@@ -125,47 +137,35 @@ th,td{
 </thead>
 <tbody id="recordTable"></tbody>
 </table>
+</div>
 
 <script>
 let interval;
 let endTime;
 let totalMsGlobal;
-let bellSettings = [];
-let records = JSON.parse(localStorage.getItem("records")) || [];
-let currentIndex = null;
-let bellAudio;
-
-function initAudio(){
-  bellAudio = new Audio("bell.mp3")
-  bellAudio.load();
-  bellAudio.play().then(()=>{
-     bellAudio.pause();
-     bellAudio.currentTime = 0;
-  }).catch(()=>{});
-}
+let bellSettings=[];
+let records=JSON.parse(localStorage.getItem("records"))||[];
+let currentIndex=null;
 
 function playBell(times){
+  const audio=new Audio("https://actions.google.com/sounds/v1/alarms/bell_ring.ogg");
   for(let i=0;i<times;i++){
     setTimeout(()=>{
-      bellAudio.currentTime=0;
-      bellAudio.play();
-    },i*120);
+      audio.currentTime=0;
+      audio.play();
+    },i*150);
   }
 }
 
 function getMs(minId,secId){
-  const m = Number(document.getElementById(minId).value)||0;
-  const s = Number(document.getElementById(secId).value)||0;
+  const m=Number(document.getElementById(minId).value)||0;
+  const s=Number(document.getElementById(secId).value)||0;
   return (m*60+s)*1000;
 }
 
 function startTimer(){
-  initAudio();
-  const student = document.getElementById("studentNumber").value;
-  if(!student){
-    alert("出席番号を入力してください");
-    return;
-  }
+  const student=document.getElementById("studentNumber").value;
+  if(!student){ alert("出席番号を入力してください"); return; }
 
   records.push({
     number:Number(student),
@@ -177,27 +177,27 @@ function startTimer(){
     skill:0
   });
 
-  currentIndex = records.length-1;
+  currentIndex=records.length-1;
   localStorage.setItem("records",JSON.stringify(records));
   renderTable();
 
-  totalMsGlobal = getMs("setMin","setSec");
-  endTime = Date.now()+totalMsGlobal;
+  totalMsGlobal=getMs("setMin","setSec");
+  endTime=Date.now()+totalMsGlobal;
 
-  bellSettings = [
+  bellSettings=[
     {time:getMs("bell1Min","bell1Sec"),count:Number(document.getElementById("bell1Count").value)},
     {time:getMs("bell2Min","bell2Sec"),count:Number(document.getElementById("bell2Count").value)},
     {time:getMs("bell3Min","bell3Sec"),count:Number(document.getElementById("bell3Count").value)}
   ];
 
-  interval = setInterval(()=>{
-    const now = Date.now();
-    const remaining = endTime-now;
-    const displayMs = remaining>=0?remaining:Math.abs(remaining);
+  interval=setInterval(()=>{
+    const now=Date.now();
+    const remaining=endTime-now;
+    const displayMs=remaining>=0?remaining:Math.abs(remaining);
 
-    const min = Math.floor(displayMs/60000);
-    const sec = Math.floor((displayMs%60000)/1000);
-    document.getElementById("timer").textContent =
+    const min=Math.floor(displayMs/60000);
+    const sec=Math.floor((displayMs%60000)/1000);
+    document.getElementById("timer").textContent=
       (remaining>=0?"":"+")+
       String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0");
 
@@ -215,15 +215,15 @@ function stopTimer(){
   clearInterval(interval);
   if(currentIndex===null) return;
 
-  const actualElapsed = Date.now()-(endTime-totalMsGlobal);
-  const actualMin = Math.floor(actualElapsed/60000);
-  const actualSec = Math.floor((actualElapsed%60000)/1000);
+  const actualElapsed=Date.now()-(endTime-totalMsGlobal);
+  const actualMin=Math.floor(actualElapsed/60000);
+  const actualSec=Math.floor((actualElapsed%60000)/1000);
 
-  const overMs = actualElapsed-totalMsGlobal;
+  const overMs=actualElapsed-totalMsGlobal;
   let overText="0分0秒";
   if(overMs>0){
-    const om = Math.floor(overMs/60000);
-    const os = Math.floor((overMs%60000)/1000);
+    const om=Math.floor(overMs/60000);
+    const os=Math.floor((overMs%60000)/1000);
     overText=`${om}分${os}秒`;
   }
 
@@ -255,17 +255,21 @@ function updateMemo(index,text){
   localStorage.setItem("records",JSON.stringify(records));
 }
 
+function updateNumber(index,value){
+  records[index].number=Number(value);
+  localStorage.setItem("records",JSON.stringify(records));
+}
+
 function renderTable(){
   const table=document.getElementById("recordTable");
   table.innerHTML="";
-
   records.forEach((r,i)=>{
     const row=document.createElement("tr");
-
     if(i===currentIndex) row.classList.add("currentRow");
-
     row.innerHTML=`
-    <td>${r.number}</td>
+    <td><input type="number" value="${r.number}"
+      style="width:60px"
+      onchange="updateNumber(${i},this.value)"></td>
     <td>${r.actual}</td>
     <td>${r.over}</td>
     <td>${renderStars(r.specific,i,"specific")}</td>
@@ -284,20 +288,8 @@ function renderTable(){
 }
 
 function deleteRecord(index){
-
   if(!confirm("この記録を削除しますか？")) return;
-
   records.splice(index,1);
-
-  // 発表中の行を消した場合の安全処理
-  if(currentIndex===index){
-    currentIndex=null;
-    clearInterval(interval);
-    document.getElementById("timer").textContent="00:00";
-  }else if(currentIndex>index){
-    currentIndex--; 
-  }
-
   localStorage.setItem("records",JSON.stringify(records));
   renderTable();
 }
@@ -311,16 +303,46 @@ function exportCSV(){
   const blob=new Blob([csv],{type:"text/csv"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
+
+  const name=document.getElementById("csvName").value.trim();
+  a.download=(name?name:"presentation_records")+".csv";
+
   a.href=url;
-  a.download="presentation_records.csv";
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function importCSV(event){
+  const file=event.target.files[0];
+  if(!file) return;
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lines=e.target.result.split("\n");
+    lines.shift();
+    records=[];
+    lines.forEach(line=>{
+      if(!line.trim()) return;
+      const cols=line.split(",");
+      records.push({
+        number:Number(cols[0]),
+        actual:cols[1],
+        over:cols[2],
+        specific:Number(cols[3]),
+        originality:Number(cols[4]),
+        skill:Number(cols[5]),
+        memo:cols[6]?.replace(/"/g,"")||""
+      });
+    });
+    localStorage.setItem("records",JSON.stringify(records));
+    renderTable();
+  };
+  reader.readAsText(file);
 }
 
 renderTable();
 </script>
 
 <div class="signature">©️2026 h.kikuchi</div>
-
 </body>
 </html>
