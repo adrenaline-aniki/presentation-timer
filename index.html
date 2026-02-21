@@ -190,26 +190,31 @@ function startTimer(){
     {time:getMs("bell3Min","bell3Sec"),count:Number(document.getElementById("bell3Count").value)}
   ];
 
-  interval=setInterval(()=>{
-    const now=Date.now();
-    const remaining=endTime-now;
-    const displayMs=remaining>=0?remaining:Math.abs(remaining);
+interval=setInterval(()=>{
+  const now=Date.now();
+  const remaining=endTime-now;
+  const displayMs=remaining>=0?remaining:Math.abs(remaining);
 
-    const min=Math.floor(displayMs/60000);
-    const sec=Math.floor((displayMs%60000)/1000);
-    document.getElementById("timer").textContent=
-      (remaining>=0?"":"+")+
-      String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+  const min=Math.floor(displayMs/60000);
+  const sec=Math.floor((displayMs%60000)/1000);
 
-    bellSettings.forEach(b=>{
-      if(b.count>0 && Math.abs(remaining-b.time)<500){
-        playBell(b.count);
-        b.count=0;
-      }
-    });
+  document.getElementById("timer").textContent=
+    (remaining>=0?"":"+")+
+    String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0");
 
-  },200);
-}
+  // 🔔 ベル判定復活
+  bellSettings.forEach(b=>{
+    if(
+      b.count>0 &&
+      remaining<=b.time &&
+      remaining> b.time-300
+    ){
+      playBell(b.count);
+      b.count=0; // 一回だけ鳴らす
+    }
+  });
+
+},200);
 
 function stopTimer(){
   clearInterval(interval);
