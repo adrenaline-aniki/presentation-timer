@@ -164,6 +164,10 @@ function getMs(minId,secId){
 }
 
 function startTimer(){
+  bellAudio.play().then(()=>{
+  bellAudio.pause();
+  bellAudio.currentTime=0;
+});
   const student=document.getElementById("studentNumber").value;
   if(!student){ alert("出席番号を入力してください"); return; }
 
