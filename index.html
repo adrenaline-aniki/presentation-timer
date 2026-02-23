@@ -119,11 +119,18 @@ thead th{
 <button onclick="startTimer()">開始</button>
 <button onclick="stopTimer()">終了</button>
 
+<br>
+手動ベル：
+<button onclick="playBell(1)">カーン</button>
+<button onclick="playBell(2)">カンカーン</button>
+<button onclick="playBell(3)">カンカンカーン</button>
+
 <br><br>
 
 CSV名：
 <input type="text" id="csvName" placeholder="クラス名など">
 <button onclick="exportCSV()">CSV出力</button>
+<button onclick="clearAllRecords()">全記録クリア</button>
 <input type="file" accept=".csv" onchange="importCSV(event)">
 
 <div class="tableContainer">
@@ -164,6 +171,13 @@ function playBell(times){
       });
     }, i*120);
   }
+}
+
+function clearAllRecords(){
+  if(!confirm("本当にすべての記録を削除しますか？")) return;
+  records = [];
+  localStorage.removeItem("records");
+  renderTable();
 }
 
 function getMs(minId,secId){
