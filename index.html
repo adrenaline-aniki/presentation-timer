@@ -143,13 +143,17 @@ let bellSettings=[];
 let records=JSON.parse(localStorage.getItem("records"))||[];
 let currentIndex=null;
 
+let bellAudio = new Audio("bell.mp3");
+
 function playBell(times){
-  const audio=new Audio("https://actions.google.com/sounds/v1/alarms/bell_ring.ogg");
   for(let i=0;i<times;i++){
     setTimeout(()=>{
-      audio.currentTime=0;
-      audio.play();
-    },i*150);
+      bellAudio.pause();
+      bellAudio.currentTime=0;
+      bellAudio.play().catch(e=>{
+        console.log("再生エラー:",e);
+      });
+    }, i*120);
   }
 }
 
